@@ -326,6 +326,43 @@ cd server && ENCORE_DB=./data/demo.sqlite npm run dev
 
 The demo passwords are not recorded in the repository — ask whoever added the snapshot if you need to sign in as one of those accounts.
 
+### 7. Signing in as several accounts at once
+
+Demonstrating matching needs more than one person signed in simultaneously. **Separate ports will not do this.** The session cookie is set without a `Domain`, and cookies are scoped by host only — [RFC 6265](https://www.rfc-editor.org/rfc/rfc6265#section-8.5) explicitly gives them no port isolation. So `localhost:5173` and `localhost:5174` share one jar, and signing in on the second logs you out of the first.
+
+Separate **hostnames** do work. Browsers resolve any `*.localhost` name to 127.0.0.1 themselves, and each name is its own cookie jar, so one Vite server answers to all of them with no extra configuration and no `/etc/hosts` editing:
+
+| Tab | Open | Account |
+| --- | --- | --- |
+| a1 | `http://a1.localhost:5173` | `liam@gmail.com` |
+| a2 | `http://a2.localhost:5173` | `noah@gmail.com` |
+| a3 | `http://a3.localhost:5173` | `maya@gmail.com` |
+| a4 | `http://a4.localhost:5173` | `alice@gmail.com` |
+| a5 | `http://a5.localhost:5173` | `emma@gmail.com` |
+
+All five sign in with the password `testtest`. They exist only in the local demo database and reach nothing outside it.
+
+Use **Chrome or Firefox**; Safari does not resolve `*.localhost`. If the Google Maps key has HTTP referrer restrictions, allow `http://*.localhost:5173/*` as well, or these tabs hit a referrer error.
+
+#### What each account is for
+
+Positions below are as the demo database currently stands; the concert is **William So, 8 November 2026**.
+
+| Tab | Account | Role in the demo |
+| --- | --- | --- |
+| a1 | `liam@gmail.com` | **Matched member.** Already joined "Trial" through Browse and choose. Shows a confirmed membership, the group channel and the meetup planner. |
+| a2 | `noah@gmail.com` | **Fresh seeker.** Joined the concert, no group and no search. Use this one to walk discovery from the beginning: choose Browse and choose, enroll, apply to a group. |
+| a3 | `maya@gmail.com` | **Automatic matching.** Enrolled on the match list in `algorithm` mode. Shows the Find a match flow and the offer-approval cycle. Has not joined the concert yet, so she also demonstrates the join-first prerequisite. |
+| a4 | `alice@gmail.com` | **Host.** Hosts the group "Trial" (15 stranger places). Shows the host side: approving applicants, group settings, group chat. A host never sees their own group in Browse and choose — that is deliberate, not a fault. |
+| a5 | `emma@gmail.com` | **Second seeker.** Same starting position as noah. Use for a second simultaneous applicant, so the host can approve one and decline another. |
+
+#### Prerequisites that silently hide things
+
+- **A group only appears in Browse and choose when the viewer has an open group search for that concert.** No open `seeker_request` means an empty list, with no explanation on screen.
+- **Companion gender preference is a dealbreaker, not a ranking penalty.** A group whose host does not match the seeker's preference is removed from the list entirely and silently. If a group you expect is missing, check this first.
+- **Joining a concert requires a profile photo** (`profile_picture_required`). The accounts above have one; the `demo.*` accounts in the committed snapshot do not.
+- A group must be **published** with at least one stranger place before anyone can find it.
+
 ## Testing
 
 ENCORE uses complementary test types:
